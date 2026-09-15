@@ -40,6 +40,8 @@ Amount extraction (`extract_amount`) reads the invoice PDF text via `page.get_te
 
 `CATEGORIES` entries can be either a string (single-level category) or a tuple `(parent, [subtypes])`. Tuple entries indicate the parent folder must be split further: each subtype gets its own bundle (invoices + paste sheet) and the parent folder itself does not accept loose PDFs. Currently only `市外差旅费` is split this way — into `机票`, `火车票`, `打车`, `住宿`, `餐饮` — because finance treats these as separate sub-claims under "out-of-town travel" with the same one-paste-sheet-one-type rule. Adding more split categories is just appending more tuples; the loop in `process_group` and the validation logic already handle them generically.
 
+Within `火车票`, `is_train_change_fee` identifies railway e-tickets whose extracted text contains `改签费`. `process_group` receives this as `single_predicate`: normal tickets are first sorted by departure date/time and paired continuously, then each change-fee ticket is appended as a one-invoice page followed by its own paste sheet. Removing change-fee tickets before pairing is intentional, so they do not leave otherwise pairable normal tickets stranded on separate pages.
+
 Input file conventions (paths are hardcoded in the notebook):
 - `待报销的发票/<category>/*.pdf` — leaf categories. Folder names are simplified versions of the paste-sheet category text (no full-width parens or 顿号), e.g. `水费办公` for "水费（办公）", `招待费` for "招待费（餐费、住宿费）", `家具设备费` for "家具、设备费". The mapping is implicit — only the folder-name list in `CATEGORIES` is canonical.
 - `待报销的发票/市外差旅费/<subtype>/*.pdf` — subtype folders are `机票` / `火车票` / `打车` / `住宿` / `餐饮`. PDFs directly under `市外差旅费/` (skipping a subtype) are warned and skipped, same policy as root-level loose PDFs.
